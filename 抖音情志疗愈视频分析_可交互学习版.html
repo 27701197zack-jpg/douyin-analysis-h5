@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>抖音情志疗愈视频分析｜可交互学习</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --card: #ffffff;
+    --primary: #6b8e7a;
+    --primary-light: #a8c5b5;
+    --primary-dark: #4a6b56;
+    --accent: #e8a87c;
+    --accent-light: #f5d0b5;
+    --text: #3d3d3d;
+    --text-light: #7a7a7a;
+    --border: #e0ddd6;
+    --shadow: 0 4px 20px rgba(0,0,0,0.06);
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* 顶部进度 */
+  .progress-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--border);
+    z-index: 100;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  /* 导航 */
+  .nav {
+    position: fixed;
+    top: 4px; right: 0;
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    z-index: 99;
+  }
+  .nav-btn {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    color: var(--text-light);
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.2s;
+  }
+  .nav-btn:hover { background: var(--primary-light); color: white; border-color: var(--primary-light); }
+  .nav-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  /* 页面容器 */
+  .pages { width: 100%; max-width: 520px; margin: 0 auto; padding: 0 20px; }
+
+  /* 通用页面 */
+  .page {
+    display: none;
+    padding: 60px 0 100px;
+    animation: fadeUp 0.4s ease;
+  }
+  .page.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 封面页 */
+  .cover-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding-bottom: 40px;
+  }
+  .cover-emoji {
+    font-size: 72px;
+    margin-bottom: 24px;
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .cover-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+  .cover-subtitle {
+    font-size: 15px;
+    color: var(--text-light);
+    margin-bottom: 40px;
+    line-height: 1.8;
+  }
+  .cover-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 40px;
+  }
+  .cover-meta-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 13px;
+    color: var(--text-light);
+  }
+  .cover-meta-item span { color: var(--primary-dark); font-weight: 600; }
+
+  .start-btn {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 48px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(107,142,122,0.3);
+    transition: all 0.3s;
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(107,142,122,0.4); }
+
+  /* 章节卡 */
+  .chapters {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .chapter-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .chapter-card:hover, .chapter-card:active {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--primary-light);
+  }
+  .chapter-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary), var(--accent));
+    border-radius: 4px 0 0 4px;
+  }
+  .chapter-num {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+  .chapter-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .chapter-desc {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.6;
+  }
+  .chapter-arrow {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: var(--text-light);
+    transition: transform 0.3s;
+  }
+  .chapter-card:hover .chapter-arrow { transform: translateY(-50%) translateX(4px); color: var(--primary); }
+
+  /* 分割线 */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 40px 0;
+  }
+
+  /* 通用标题 */
+  .section-label {
+    font-size: 11px;
+    color: var(--primary);
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  .section-desc {
+    font-size: 14px;
+    color: var(--text-light);
+    margin-bottom: 24px;
+  }
+
+  /* 视频原文卡片 */
+  .script-card {
+    background: linear-gradient(135deg, #f0ede8, #f7f5f0);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .script-line {
+    font-size: 15px;
+    color: var(--text);
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .script-line:last-child { border-bottom: none; }
+  .script-line:hover { background: var(--accent-light); padding-left: 8px; border-radius: 6px; }
+  .script-line .highlight { color: var(--primary-dark); font-weight: 600; }
+  .script-line .tag {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* 展开解释 */
+  .explanation {
+    background: var(--card);
+    border: 1px solid var(--primary-light);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 0;
+    display: none;
+    animation: expand 0.3s ease;
+  }
+  .explanation.show { display: block; }
+  @keyframes expand { from { opacity: 0; transform: scaleY(0.9); } to { opacity: 1; transform: scaleY(1); } }
+  .explanation-title {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .explanation-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .explanation-emoji {
+    font-size: 20px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* 情绪仪表 */
+  .emotion-meter {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .emotion-meter-label {
+    font-size: 13px;
+    color: var(--text-light);
+    margin-bottom: 8px;
+  }
+  .emotion-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .emotion-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    background: linear-gradient(90deg, var(--primary-light), var(--accent));
+  }
+  .emotion-note {
+    font-size: 12px;
+    color: var(--text-light);
+    font-style: italic;
+  }
+
+  /* 路径图 */
+  .path-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 16px 0;
+    position: relative;
+  }
+  .path-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+  }
+  .path-dot {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  .path-dot.active {
+    background: var(--primary);
+    transform: scale(1.15);
+    box-shadow: 0 2px 12px rgba(107,142,122,0.4);
+  }
+  .path-dot.hot {
+    background: var(--accent);
+    box-shadow: 0 2px 12px rgba(232,168,124,0.4);
+  }
+  .path-line {
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    width: 2px;
+    height: 40px;
+    background: var(--border);
+  }
+  .path-line.active { background: var(--primary-light); }
+  .path-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    flex: 1;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  .path-content:hover, .path-content.active {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 12px rgba(107,142,122,0.1);
+  }
+  .path-step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .path-step-text {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.5;
+  }
+  .path-emoji {
+    font-size: 18px;
+    margin-right: 4px;
+  }
+
+  /* 互动卡片 */
+  .insight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .insight-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .insight-card-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+  .insight-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .insight-card-text {
+    font-size: 13px;
+    color: var(--text-light);
+    line-height: 1.6;
+  }
+  .insight-card-expand {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .insight-card.expanded .insight-card-expand { display: block; }
+  .insight-card .expand-hint {
+    position: absolute;
+    right: 16px;
+    bottom: 14px;
+    font-size: 12px;
+    color: var(--primary);
+  }
+
+  /* 句式卡片 */
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .pattern-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .pattern-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: var(--primary-light); }
+  .pattern-card-icon { font-size: 24px; margin-bottom: 8px; }
+  .pattern-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .pattern-card-example {
+    font-size: 11px;
+    color: var(--text-light);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .pattern-wrong { color: #c0392b; }
+  .pattern-right { color: var(--primary-dark); }
+
+  /* 评论类型 */
+  .comment-types {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .comment-type {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .comment-type:hover { box-shadow: var(--shadow); }
+  .comment-type-pct {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary);
+    min-width: 50px;
+  }
+  .comment-type-body {}
+  .comment-type-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .comment-type-desc { font-size: 12px; color: var(--text-light); margin-bottom: 6px; }
+  .comment-type-example {
+    font-size: 12px;
+    color: var(--primary-dark);
+    font-style: italic;
+    padding: 8px 10px;
+    background: #f5f0eb;
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* 技巧表格 */
+  .tech-table {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .tech-row {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .tech-row:last-child { border-bottom: none; }
+  .tech-row:hover { background: #f9f8f5; }
+  .tech-row.expanded { background: #f5f0eb; }
+  .tech-num {
+    padding: 14px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 40px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+  }
+  .tech-body { flex: 1; padding: 14px 16px; }
+  .tech-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .tech-detail {
+    display: none;
+    font-size: 13px;
+    color: var(--text-light);
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+  .tech-row.expanded .tech-detail { display: block; }
+  .tech-row-arrow { padding: 14px 16px; color: var(--text-light); font-size: 14px; transition: transform 0.3s; }
+  .tech-row.expanded .tech-row-arrow { transform: rotate(180deg); }
+
+  /* 下一步建议 */
+  .suggestion {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .suggestion:hover { box-shadow: var(--shadow); }
+  .suggestion-star { font-size: 24px; min-width: 36px; }
+  .suggestion-body {}
+  .suggestion-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .suggestion-reason { font-size: 12px; color: var(--text-light); }
+
+  /* 底部导航 */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 20px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 90;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .bottom-nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-size: 14px;
+    color: var(--text-light);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .bottom-nav-btn:hover { background: var(--primary-light); color: white; border-color: var(--primary-light); }
+  .bottom-nav-btn.primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .bottom-nav-btn.primary:hover { background: var(--primary-dark); }
+
+  /* 交互反馈 */
+  .quiz-box {
+    background: linear-gradient(135deg, #e8f4ec, #f5f0eb);
+    border: 2px solid var(--primary-light);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .quiz-question {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .quiz-option {
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+  .quiz-option:hover { border-color: var(--primary); background: #f5f0eb; }
+  .quiz-option.selected { border-color: var(--primary); background: var(--primary-light); color: white; }
+  .quiz-option.correct { border-color: #27ae60; background: #eafaf1; }
+  .quiz-option.wrong { border-color: #e74c3c; background: #fdf2f2; }
+  .quiz-feedback {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-light);
+    display: none;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+  }
+  .quiz-feedback.show { display: block; }
+
+  /* 总结页 */
+  .summary-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .summary-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .summary-list {
+    list-style: none;
+  }
+  .summary-list li {
+    font-size: 13px;
+    color: var(--text);
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .summary-list li:last-child { border-bottom: none; }
+  .summary-list li::before { content: '✓'; color: var(--primary); font-weight: 700; margin-top: 1px; }
+
+  /* UGC高光 */
+  .ugc-highlight {
+    background: #faf8f4;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    padding: 16px;
+    margin: 12px 0;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+    font-style: italic;
+    position: relative;
+  }
+  .ugc-author {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 8px;
+    font-style: normal;
+    font-weight: 600;
+  }
+  .ugc-copy-btn {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .ugc-copy-btn:hover { background: var(--accent-light); color: var(--text); }
+
+  /* 热力提示 */
+  .hot-label {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .hot-label.h5 { background: #ffe0e0; color: #c0392b; }
+  .hot-label.h4 { background: #fff3e0; color: #e67e22; }
+  .hot-label.h3 { background: #fffde7; color: #f39c12; }
+
+  /* 底部留白 */
+  .pb { height: 80px; }
+
+  /* 过渡动画 */
+  .page-enter {
+    animation: pageIn 0.35s ease;
+  }
+  @keyframes pageIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .page-back {
+    animation: pageBack 0.35s ease;
+  }
+  @keyframes pageBack {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* 步骤提示 */
+  .step-tip {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-light);
+    margin: 12px 0 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<div class="nav" id="mainNav" style="display:none;">
+  <button class="nav-btn" onclick="goHome()">目录</button>
+</div>
+
+<div class="pages">
+
+  <!-- ========== 封面 ========== -->
+  <div class="page active" id="p0">
+    <div class="cover-page">
+      <div class="cover-emoji">🌿</div>
+      <div class="cover-title">抖音情志疗愈视频<br>深度分析</div>
+      <div class="cover-subtitle">
+        基于真实评论区数据<br>
+        拆解内容共鸣 × 情绪机制 × 文案结构
+      </div>
+      <div class="cover-meta">
+        <div class="cover-meta-item">数据源 <span>204</span> 条评论</div>
+        <div class="cover-meta-item">截图 <span>109</span> 张</div>
+        <div class="cover-meta-item">章节 <span>6</span> 个</div>
+      </div>
+      <button class="start-btn" onclick="goPage(1)">开始学习 →</button>
+      <div class="divider"></div>
+      <div class="chapters">
+        <div class="chapter-card" onclick="goPage(1)">
+          <div class="chapter-num">第一章</div>
+          <div class="chapter-title">视频原文逐句拆解</div>
+          <div class="chapter-desc">点击每句话，查看用户内心反应</div>
+          <div class="chapter-arrow">→</div>
+        </div>
+        <div class="chapter-card" onclick="goPage(2)">
+          <div class="chapter-num">第二章</div>
+          <div class="chapter-title">情绪加工七阶段路径</div>
+          <div class="chapter-desc">从看到视频到留下评论，完整心理过程</div>
+          <div class="chapter-arrow">→</div>
+        </div>
+        <div class="chapter-card" onclick="goPage(3)">
+          <div class="chapter-num">第三章</div>
+          <div class="chapter-title">评论类型与驱动本质</div>
+          <div class="chapter-desc">四种评论行为背后的心理动机</div>
+          <div class="chapter-arrow">→</div>
+        </div>
+        <div class="chapter-card" onclick="goPage(4)">
+          <div class="chapter-num">第四章</div>
+          <div class="chapter-title">核心文案技巧清单</div>
+          <div class="chapter-desc">7个可复制的爆款文案公式</div>
+          <div class="chapter-arrow">→</div>
+        </div>
+        <div class="chapter-card" onclick="goPage(5)">
+          <div class="chapter-num">第五章</div>
+          <div class="chapter-title">下一条视频方向建议</div>
+          <div class="chapter-desc">基于评论区数据的机会洞察</div>
+          <div class="chapter-arrow">→</div>
+        </div>
+        <div class="chapter-card" onclick="goPage(6)">
+          <div class="chapter-num">自测</div>
+          <div class="chapter-title">知识小测验</div>
+          <div class="chapter-desc">检验你学到了多少</div>
+          <div class="chapter-arrow">→</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 第一章：逐句拆解 ========== -->
+  <div class="page" id="p1">
+    <div class="section-label">第一章</div>
+    <div class="section-title">视频原文逐句拆解</div>
+    <div class="section-desc">点击每一句，查看用户在读到这句话时内心发生了什么。试试看 👇</div>
+
+    <div class="script-card">
+      <div class="script-line" onclick="toggleExp(this)">
+        一个人品好的女人，往往不喜欢合群
+        <span class="tag">身份识别</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          读到"人品好的女人" → 大脑开始扫描：这是不是我？<br>
+          轻微的注意力锁定 ← <strong>第一个钩子</strong><br>
+          <em>用户从旁观者变成了潜在当事人</em>
+        </div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        她不喜欢扎堆闲聊，也不喜欢搬弄是非
+        <span class="tag">行为确认</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          内心检索：✓ 我是这样<br>
+          内心检索：✓ 我是这样<br>
+          <strong>自我代入感：快速上升</strong>
+        </div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        更愿意独自完成自己该做的事。她不矫情，性格耿直。
+        <span class="tag">强化确认</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          四个行为特征 → 逐条检索 → 全部吻合<br>
+          <strong>身份确认度：快速上升</strong><br>
+          <em>但此时情绪还未强烈，只是轻度认知匹配</em>
+        </div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        你可能会觉得他不懂人情世故
+        <span class="tag">情绪蓄水</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          内心反应：是啊！（外部确实这样看我）<br>
+          唤起真实记忆："你怎么不合群""你怎么这么冷"<br>
+          <strong>委屈感被唤起，但还没被安慰 → 情绪悬停</strong>
+        </div>
+        <div class="emotion-note" style="margin-top:8px;">⏸ 这里制造了"情绪蓄水池"——先让用户感到委屈，但不急着反转</div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        但实际她是知世故而不世故
+        <span class="tag">第一次反转</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          "但实际上" → 认知反转触发器<br>
+          "不懂人情世故" → 重新解读为"知但不屑于"<br>
+          <strong>委屈感 → 优越感（不是我没能力，是我不愿意）</strong>
+        </div>
+        <div class="emotion-note" style="margin-top:8px;">⚡ "知X而不X"结构：承认X存在 + 否定X价值 = 高段位辩护</div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        知圆滑而不屑于圆滑
+        <span class="tag">强化反转</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          双重强化：不是不懂 → 是不屑<br>
+          <strong>被动感 → 掌控感</strong><br>
+          <em>情绪急剧上升，"终于有人懂了！"</em>
+        </div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        其实她是早看透了世间的人情冷暖
+        <span class="tag">深层共鸣</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          从行为认同 → 价值观认同<br>
+          唤起真实人生经历：被冷落、被利用的经历<br>
+          <strong>深层共鸣 + 沧桑感 + 孤独感减轻（发现同类）</strong>
+        </div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)" style="background:#fff5ee;border-radius:8px;padding:8px;">
+        <span style="color:#c0392b;font-weight:700;">他是世界上寂寞又可怜的人，<br>可他却觉得你是俗不可耐的人</span>
+        <span class="tag" style="background:#e74c3c;">🔥 最强爆发</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          用户心理位置完成<strong>三级跳</strong>：<br>
+          ① 被误解为"可怜的"（被动、负面）<br>
+          ↓<br>
+          ② "我看透了一切"（主动、正面）<br>
+          ↓<br>
+          ③ "我还有资格评判别人"（优越、高位）<br><br>
+          <strong>→ 评论冲动最强时刻！</strong>
+        </div>
+      </div>
+
+      <div class="script-line" onclick="toggleExp(this)">
+        这样的女人，聪明有分寸，懂得自爱
+        <span class="tag">身份贴标</span>
+      </div>
+      <div class="explanation">
+        <div class="explanation-title"><span class="explanation-emoji">💭</span>用户内心</div>
+        <div class="explanation-text">
+          负面标签全部被正面收编：<br>
+          "高冷""不合群""难相处""自我"<br>
+          → "聪明、有分寸、自爱"<br><br>
+          <strong>最终内心声音："原来我不是有问题，我是做对了"</strong>
+        </div>
+        <div class="emotion-note" style="margin-top:8px;">🏷 语言即标签，标签即身份。用户已经在用评论宣告这个新身份了</div>
+      </div>
+    </div>
+
+    <div class="quiz-box" id="quiz1">
+      <div class="quiz-question">视频中哪个转折让用户情绪最强烈？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, false)">A. "不喜欢扎堆闲聊" — 行为清单</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">B. "知世故而不世故" — 第一次反转</div>
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> C. "可怜的人→俗不可耐的人" — 认知越级</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. "聪明有分寸懂得自爱" — 价值确认</div>
+      </div>
+      <div class="quiz-feedback" id="quiz1-feedback">
+        ✅ 正确！"可怜的人→俗不可耐的人"让用户完成了<strong>认知越级</strong>——从被误解的受害者瞬间变成清醒的审判者，这是最强的心理快感。
+      </div>
+    </div>
+
+    <div class="pb"></div>
+  </div>
+
+  <!-- ========== 第二章：情绪路径 ========== -->
+  <div class="page" id="p2">
+    <div class="section-label">第二章</div>
+    <div class="section-title">情绪加工七阶段路径</div>
+    <div class="section-desc">点击每一步，展开详解 👇</div>
+
+    <div class="path-flow">
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot">1</div>
+          <div class="path-line"></div>
+        </div>
+        <div class="path-content">
+          <div class="path-step-title"><span class="path-emoji">👁</span>注意力锁定</div>
+          <div class="path-step-text">"人品好的女人" → 开始自我比对</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;">
+          <div class="explanation-text">用户从旁观者变成<strong>潜在当事人</strong>，轻度认知匹配，情绪强度：低</div>
+        </div>
+      </div>
+
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot">2</div>
+          <div class="path-line"></div>
+        </div>
+        <div class="path-content">
+          <div class="path-step-title"><span class="path-emoji">✓</span>自我代入</div>
+          <div class="path-step-text">四条行为特征逐条检索，全部吻合</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;">
+          <div class="explanation-text">身份确认度快速上升，但情绪<strong>还未强烈</strong>，只是轻度认知匹配</div>
+        </div>
+      </div>
+
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot">3</div>
+          <div class="path-line"></div>
+        </div>
+        <div class="path-content">
+          <div class="path-step-title"><span class="path-emoji">💧</span>情绪蓄水</div>
+          <div class="path-step-text">"不懂人情世故" → 委屈感唤起，但还没被安慰</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;">
+          <div class="explanation-text">情绪悬停——这是刻意制造的<strong>蓄水池</strong>，为后面的反转积蓄势能</div>
+        </div>
+      </div>
+
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot">4</div>
+          <div class="path-line"></div>
+        </div>
+        <div class="path-content">
+          <div class="path-step-title"><span class="path-emoji">⚡</span>第一次情绪释放</div>
+          <div class="path-step-text">"知世故而不世故" → 委屈→优越感，被动→掌控</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;">
+          <div class="explanation-text">委屈感转化为<strong>优越感</strong>，"不是我没能力，是我不愿意"——第一次情绪上升</div>
+        </div>
+      </div>
+
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot">5</div>
+          <div class="path-line"></div>
+        </div>
+        <div class="path-content">
+          <div class="path-step-title"><span class="path-emoji">🌊</span>深层共鸣</div>
+          <div class="path-step-text">"看透了人情冷暖" → 唤起真实人生经历</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;">
+          <div class="explanation-text">从行为认同进入<strong>价值观认同</strong>，孤独感减轻（因为发现了同类）</div>
+        </div>
+      </div>
+
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot hot">6</div>
+          <div class="path-line" style="background:var(--accent);"></div>
+        </div>
+        <div class="path-content" style="border-color:var(--accent);background:#fff8f5;">
+          <div class="path-step-title" style="color:var(--accent);"><span class="path-emoji">🔥</span>认知越级 — 最强爆发点</div>
+          <div class="path-step-text">"可怜→俗不可耐" → 用户身份从受害者→审判者</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;background:#fff8f5;border-color:var(--accent);">
+          <div class="explanation-text">三句话之间完成<strong>认知三级跳</strong>：被动（可怜的）→ 主动（看透了）→ 优越（审判者）<br><br>
+          这种认知上的越级带来<strong>最强心理快感</strong>，评论冲动达到顶点。</div>
+        </div>
+      </div>
+
+      <div class="path-step" onclick="togglePath(this)">
+        <div>
+          <div class="path-dot" style="background:var(--primary-dark);">7</div>
+        </div>
+        <div class="path-content">
+          <div class="path-step-title"><span class="path-emoji">🏷</span>身份锁定</div>
+          <div class="path-step-text">"聪明、有分寸、懂得自爱" → 新身份确认</div>
+        </div>
+        <div class="explanation" style="width:100%;margin-top:8px;">
+          <div class="explanation-text">负面标签全部被正面收编。看完视频，用户对自己的定义从<strong>"被误解的人"</strong>变成了<strong>"聪明有分寸、懂得自爱的人"</strong>。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-card-title"><span>📌</span> 核心结构公式</div>
+      <div style="background:#f5f0eb;border-radius:10px;padding:16px;text-align:center;font-size:14px;line-height:1.8;color:var(--text);">
+        <strong>先认同（行为清单）→ 制造冲突（情绪蓄水）→ 大反转（认知越级）→ 贴标签（身份锁定）</strong>
+      </div>
+    </div>
+
+    <div class="pb"></div>
+  </div>
+
+  <!-- ========== 第三章：评论类型 ========== -->
+  <div class="page" id="p3">
+    <div class="section-label">第三章</div>
+    <div class="section-title">四种评论类型的驱动本质</div>
+    <div class="section-desc">点击查看每种类型的详细分析和代表评论 👇</div>
+
+    <div class="comment-types">
+      <div class="comment-type" onclick="toggleInsight(this)">
+        <div class="comment-type-pct">~60%</div>
+        <div class="comment-type-body">
+          <div class="comment-type-title">情绪释放型</div>
+          <div class="comment-type-desc">情绪被触达，需要一个出口</div>
+          <div class="comment-type-example">"主播说的太对了" "老师说的太对了"</div>
+        </div>
+      </div>
+      <div class="comment-type" onclick="toggleInsight(this)">
+        <div class="comment-type-pct">~25%</div>
+        <div class="comment-type-body">
+          <div class="comment-type-title">身份宣告型</div>
+          <div class="comment-type-desc">在公众空间宣告自我身份，获得确认感</div>
+          <div class="comment-type-example">"我就是喜欢独来独往" "千真万确，我就是这样的人"</div>
+        </div>
+      </div>
+      <div class="comment-type" onclick="toggleInsight(this)">
+        <div class="comment-type-pct">~10%</div>
+        <div class="comment-type-body">
+          <div class="comment-type-title">深度共创型</div>
+          <div class="comment-type-desc">在视频提供的新视角上延伸创作，是最有价值的UGC</div>
+          <div class="comment-type-example">"想通，看透，领悟了，就人静心安于世无争……"</div>
+        </div>
+      </div>
+      <div class="comment-type" onclick="toggleInsight(this)">
+        <div class="comment-type-pct">~5%</div>
+        <div class="comment-type-body">
+          <div class="comment-type-title">社交互动型</div>
+          <div class="comment-type-desc">把视频当社交货币，@朋友、拉人进来</div>
+          <div class="comment-type-example">评论区回复、"说的就是你！"</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">高质量 UGC 金矿</div>
+    <div class="section-title" style="font-size:18px;">可以直接用作下条视频素材的评论</div>
+
+    <div class="ugc-highlight">
+      我就是这么做我自己的，想通，看透，领悟了，就人静心安于世无争，孤单寂寞也自有乐……
+      <div class="ugc-author">— 知足常乐 湖南</div>
+    </div>
+    <div class="ugc-highlight">
+      她们有清晰的边界感，不轻易妥协自己的原则……真正的友谊是灵魂同频的默契，而非表面的热闹。
+      <div class="ugc-author">— 云南用户</div>
+    </div>
+    <div class="ugc-highlight">
+      清醒，一点也不寂寞。独来独往的非神既兽，宁座小窗观云舞，不与他人论事非。
+      <div class="ugc-author">— 赖玉琼 四川</div>
+    </div>
+    <div class="ugc-highlight">
+      不可怜！独处干净清净且自信自由自在！
+      <div class="ugc-author">— 阳光女人 广西</div>
+    </div>
+
+    <div class="pb"></div>
+  </div>
+
+  <!-- ========== 第四章：文案技巧 ========== -->
+  <div class="page" id="p4">
+    <div class="section-label">第四章</div>
+    <div class="section-title">7个可复制的爆款文案技巧</div>
+    <div class="section-desc">点击每条展开看详细解释和示例 👇</div>
+
+    <div class="tech-table">
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">1</div>
+        <div class="tech-body">
+          <div class="tech-name">「知X而不X」结构</div>
+          <div class="tech-detail">承认X的存在（我知道），同时否定X的价值（但我不屑于）。效果：不是简单的"你很好"，而是高段位辩护。用户感到：有人站在更高认知层面为我辩护。<br><br><strong>示例</strong>：知世故而不世故，知圆滑而不屑于圆滑</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">2</div>
+        <div class="tech-body">
+          <div class="tech-name">情绪蓄水池</div>
+          <div class="tech-detail">先把误解说出来，但<strong>不急着反转</strong>。让用户的委屈情绪悬停片刻，积蓄势能。反转来得越晚，爆发越强。<br><br><strong>示例</strong>：先说"你可能觉得他不懂人情世故"（蓄水），再说"实际是知世故而不世故"（放水）</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">3</div>
+        <div class="tech-body">
+          <div class="tech-name">行为清单式描写</div>
+          <div class="tech-detail">不写抽象定义，而是列出<strong>具体行为</strong>。让用户逐条做"是我吗"的自我检索。四条全部吻合后，自我代入感极强。<br><br><strong>示例</strong>：不扎堆、不搬弄是非、独自完成该做的事、不矫情、性格耿直</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">4</div>
+        <div class="tech-body">
+          <div class="tech-name">认知越级设计</div>
+          <div class="tech-detail">让用户在两句话之间完成<strong>心理位置的跃升</strong>：从被动的负面标签 → 主动的正面标签 → 优越的高位标签。落差越大，心理快感越强。<br><br><strong>示例</strong>：可怜的人 → 看透一切的人 → 审判者（俗不可耐的人）</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">5</div>
+        <div class="tech-body">
+          <div class="tech-name">正面贴标签</div>
+          <div class="tech-detail">不给用户自己总结的机会，直接给她一个<strong>正面身份</strong>。语言即标签，标签即身份。用户在评论时，是在宣告这个新身份。<br><br><strong>示例</strong>：聪明、有分寸、懂得自爱（而不是说"你要自信"）</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">6</div>
+        <div class="tech-body">
+          <div class="tech-name">身份定义句式 > 判断句式</div>
+          <div class="tech-detail">用身份句式（"你是XX的人"），而非判断句式（"XX的人很聪明"）。用户可以在身份句式上宣告"我就是"，判断句式只能同意。<br><br>
+          <span class="pattern-wrong">❌</span> "独来独往的女人很聪明"（判断句，用户只能点赞）<br>
+          <span class="pattern-right">✅</span> "知世故而不世故"（身份句，用户可以宣告"我就是"）</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+      <div class="tech-row" onclick="toggleTech(this)">
+        <div class="tech-num">7</div>
+        <div class="tech-body">
+          <div class="tech-name">金句设计</div>
+          <div class="tech-detail">每条视频设计1-2句<strong>可独立存在</strong>的短句，让用户"不是转发视频，而是转发这句话"——降低分享的心理成本。<br><br><strong>本条视频的金句</strong>：知世故而不世故 / 腹有诗书气自华 / 宁座小窗观云舞，不与他人论事非</div>
+        </div>
+        <div class="tech-row-arrow">▼</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">技巧对比练习</div>
+    <div class="section-title" style="font-size:18px;">同样的意思，不同句式的效果差别</div>
+
+    <div class="pattern-grid">
+      <div class="pattern-card">
+        <div class="pattern-card-icon">❌</div>
+        <div class="pattern-card-title">判断句式</div>
+        <div class="pattern-card-example">"独来独往的女人很聪明"</div>
+      </div>
+      <div class="pattern-card">
+        <div class="pattern-card-icon">✅</div>
+        <div class="pattern-card-title">身份定义句式</div>
+        <div class="pattern-card-example">"知世故而不世故"</div>
+      </div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-question">「知X而不X」结构为什么有效？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, false)">A. 因为读起来顺口</div>
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> B. 承认X存在 + 否定X价值 = 高段位辩护</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">C. 因为字数对仗工整</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. 因为大家都知道这个结构</div>
+      </div>
+      <div class="quiz-feedback" id="quiz2-feedback">
+        ✅ 正确！这个结构的核心是：先承认"我知道人情世故"（用户感到被理解），再否定"但我不屑于"（用户感到优越）。不是简单的"你很好"，而是站在更高认知层面的辩护。
+      </div>
+    </div>
+
+    <div class="pb"></div>
+  </div>
+
+  <!-- ========== 第五章：下一步建议 ========== -->
+  <div class="page" id="p5">
+    <div class="section-label">第五章</div>
+    <div class="section-title">下一条视频方向建议</div>
+    <div class="section-desc">基于204条评论数据，按优先级排序 👇</div>
+
+    <div class="suggestion" onclick="toggleInsight(this)">
+      <div class="suggestion-star">⭐⭐⭐⭐⭐</div>
+      <div class="suggestion-body">
+        <div class="suggestion-title">「我就是这种人」系列</div>
+        <div class="suggestion-reason">评论区刷屏"说的就是我"，身份认同需求极强，用户渴望用一句话定义自己</div>
+      </div>
+    </div>
+
+    <div class="suggestion" onclick="toggleInsight(this)">
+      <div class="suggestion-star">⭐⭐⭐⭐</div>
+      <div class="suggestion-body">
+        <div class="suggestion-title">独处哲学深化</div>
+        <div class="suggestion-reason">知足常乐等评论证明用户渴望更深层表达，视频可以给一个更高视角</div>
+      </div>
+    </div>
+
+    <div class="suggestion" onclick="toggleInsight(this)">
+      <div class="suggestion-star">⭐⭐⭐⭐</div>
+      <div class="suggestion-body">
+        <div class="suggestion-title">被误解→实际清醒的反转叙事</div>
+        <div class="suggestion-reason">反差越大情绪越强，这条视频的结构已经被验证，可换人群/场景复用</div>
+      </div>
+    </div>
+
+    <div class="suggestion" onclick="toggleInsight(this)">
+      <div class="suggestion-star">⭐⭐⭐</div>
+      <div class="suggestion-body">
+        <div class="suggestion-title">边界感的具体操作指南</div>
+        <div class="suggestion-reason">大家认同"边界感"但不知道怎么表达"我就是这样设定边界的"，有实用价值</div>
+      </div>
+    </div>
+
+    <div class="suggestion" onclick="toggleInsight(this)">
+      <div class="suggestion-star">⭐⭐⭐</div>
+      <div class="suggestion-body">
+        <div class="suggestion-title">用独处力量对抗小人的困扰</div>
+        <div class="suggestion-reason">"是的，但身边一直小人不断"等委屈声音指向此方向，接住了用户的痛点</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="insight-card" onclick="toggleInsight(this)">
+      <div class="insight-card-icon">🌍</div>
+      <div class="insight-card-title">海外华人共鸣强烈</div>
+      <div class="insight-card-text">法国、马来西亚、韩国、新加坡均有评论，情志疗愈内容有跨文化生命力</div>
+      <div class="insight-card-expand">这类内容不只是针对国内中年女性，内核是"被误解后如何自处"的普世命题，在海外华人群体中同样适用。</div>
+      <div class="expand-hint">点击展开 →</div>
+    </div>
+
+    <div class="insight-card" onclick="toggleInsight(this)">
+      <div class="insight-card-icon">💎</div>
+      <div class="insight-card-title">评论区本身就是金矿</div>
+      <div class="insight-card-text">高质量UGC比原视频文案更有深度，可以直接用作下一条视频素材</div>
+      <div class="insight-card-expand">净行（"腹有诗书气自华"）、知足常乐（独处哲学）、赖玉琼（"宁座小窗观云舞"）的评论，都是天然的高质量文案素材。下条视频可以直接引用+延伸。</div>
+      <div class="expand-hint">点击展开 →</div>
+    </div>
+
+    <div class="pb"></div>
+  </div>
+
+  <!-- ========== 第六章：测验 ========== -->
+  <div class="page" id="p6">
+    <div class="section-label">自测</div>
+    <div class="section-title">知识小测验</div>
+    <div class="section-desc">检验你学到了多少 👇</div>
+
+    <div class="quiz-box">
+      <div class="quiz-question">1. 视频中"情绪蓄水池"的作用是什么？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, false)">A. 让用户感到愤怒</div>
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> B. 让委屈情绪悬停，为后面的反转积蓄势能</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">C. 让用户跳过这段内容</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. 让视频显得更有深度</div>
+      </div>
+      <div class="quiz-feedback">✅ 先把误解说出来但不反转，让情绪悬停积蓄势能，反转来得越晚爆发越强。</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-question">2. "认知越级"指的是用户的什么变化？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, false)">A. 认知能力提升</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">B. 情绪越来越激动</div>
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> C. 心理位置从受害者跃升到审判者</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. 对主播产生信任</div>
+      </div>
+      <div class="quiz-feedback">✅ "可怜的人→看透一切的人→审判者"，三步完成心理越级，产生最强心理快感。</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-question">3. 身份定义句式为什么比判断句式更好？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, false)">A. 更押韵</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">B. 更短</div>
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> C. 用户可以在身份句式上宣告"我就是"，判断句式只能同意</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. 更适合朗读</div>
+      </div>
+      <div class="quiz-feedback">✅ "知世故而不世故"是身份句，用户可以宣告"我就是这种人"，比"独来独往的女人很聪明"更有宣告感。</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-question">4. 评论中占比最大的是哪种类型？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> A. 情绪释放型（~60%）</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">B. 深度共创型（~10%）</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">C. 社交互动型（~5%）</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. 身份宣告型（~25%）</div>
+      </div>
+      <div class="quiz-feedback">✅ 60%的用户只是简单表达认同（"说的太对了"），这是评论的基数。10%的深度共创型是最有价值的UGC，是内容迭代的素材库。</div>
+    </div>
+
+    <div class="quiz-box">
+      <div class="quiz-question">5. 视频结尾"聪明有分寸懂得自爱"的作用是什么？</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectQuiz(this, false)">A. 总结视频内容</div>
+        <div class="quiz-option" onclick="selectQuiz(this, true)" data-correct> B. 给用户一个正面身份标签，让用户在评论时宣告这个新身份</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">C. 呼应开头</div>
+        <div class="quiz-option" onclick="selectQuiz(this, false)">D. 增加点赞数</div>
+      </div>
+      <div class="quiz-feedback">✅ 直接给用户贴标签，而不是让用户自己总结。用户看完视频后对自己的定义变成了"聪明有分寸、懂得自爱的人"，评论行为本质上是在宣告这个新身份。</div>
+    </div>
+
+    <div class="summary-card" style="margin-top:24px;">
+      <div class="summary-card-title"><span>🎓</span> 学习总结</div>
+      <ul class="summary-list">
+        <li>情绪蓄水池 → 反转前先蓄势</li>
+        <li>「知X而不X」结构 → 高段位辩护公式</li>
+        <li>认知越级设计 → 制造最强心理快感</li>
+        <li>身份定义句式 → 让用户宣告而非同意</li>
+        <li>正面贴标签 → 锁定新身份</li>
+        <li>评论即宣告 → UGC是下一条内容的素材库</li>
+      </ul>
+    </div>
+
+    <div class="pb"></div>
+  </div>
+
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav" id="bottomNav">
+  <button class="bottom-nav-btn" onclick="goPrev()">← 上一步</button>
+  <button class="bottom-nav-btn primary" id="nextBtn" onclick="goNext()">下一步 →</button>
+</div>
+
+<script>
+let currentPage = 0;
+const totalPages = 7; // 0=封面, 1-6=内容页
+
+function updateProgress() {
+  const p = (currentPage / (totalPages - 1)) * 100;
+  document.getElementById('progress').style.width = p + '%';
+  document.getElementById('nextBtn').textContent = currentPage === totalPages - 1 ? '完成 ✓' : '下一步 →';
+  document.getElementById('bottomNav').style.display = currentPage === 0 ? 'none' : 'flex';
+  document.getElementById('mainNav').style.display = currentPage === 0 ? 'none' : 'flex';
+}
+
+function goPage(n) {
+  if (n < 0 || n >= totalPages) return;
+  const old = document.getElementById('p' + currentPage);
+  const target = document.getElementById('p' + n);
+  if (old) {
+    old.classList.remove('active');
+    old.style.display = 'none';
+  }
+  if (target) {
+    target.classList.add('active');
+    target.style.display = 'block';
+    target.classList.remove('page-enter', 'page-back');
+    void target.offsetWidth;
+    target.classList.add(n > currentPage ? 'page-enter' : 'page-back');
+  }
+  currentPage = n;
+  updateProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goHome() { goPage(0); }
+function goNext() { goPage(currentPage + 1); }
+function goPrev() { goPage(currentPage - 1); }
+
+// 展开/收起脚本行解释
+function toggleExp(el) {
+  const next = el.nextElementSibling;
+  if (next && next.classList.contains('explanation')) {
+    // 关闭其他所有展开的
+    document.querySelectorAll('.explanation.show').forEach(e => {
+      if (e !== next) e.classList.remove('show');
+    });
+    next.classList.toggle('show');
+  }
+}
+
+// 展开/收起路径步骤
+function togglePath(el) {
+  const next = el.querySelector('.explanation');
+  if (next) {
+    document.querySelectorAll('.path-step .explanation').forEach(e => {
+      if (e !== next) e.classList.remove('show');
+    });
+    next.classList.toggle('show');
+  }
+  el.querySelector('.path-dot').classList.toggle('active');
+}
+
+// 展开/收起洞察卡
+function toggleInsight(el) {
+  el.classList.toggle('expanded');
+  const hint = el.querySelector('.expand-hint');
+  if (hint) {
+    hint.textContent = el.classList.contains('expanded') ? '点击收起 ←' : '点击展开 →';
+  }
+}
+
+// 展开/收起技巧行
+function toggleTech(el) {
+  el.classList.toggle('expanded');
+}
+
+// 测验选择
+function selectQuiz(el, correct) {
+  const box = el.closest('.quiz-box');
+  box.querySelectorAll('.quiz-option').forEach(o => o.classList.remove('selected', 'correct', 'wrong'));
+  el.classList.add('selected');
+  if (correct) {
+    el.classList.add('correct');
+  } else {
+    el.classList.add('wrong');
+    // 显示正确答案
+    box.querySelector('[data-correct]').classList.add('correct');
+  }
+  const feedback = box.querySelector('.quiz-feedback');
+  if (feedback) feedback.classList.add('show');
+}
+
+updateProgress();
+</script>
+
+</body>
+</html>
